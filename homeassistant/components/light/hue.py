@@ -363,7 +363,9 @@ class HueLight(Light):
 
     def turn_on(self, **kwargs):
         """Turn the specified or all lights on."""
-        command = {'on': True}
+        command = {}
+        if not self.is_on:
+            command = {'on': True}
 
         if ATTR_TRANSITION in kwargs:
             command['transitiontime'] = kwargs[ATTR_TRANSITION] * 10
