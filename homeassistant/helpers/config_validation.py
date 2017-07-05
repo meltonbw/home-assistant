@@ -111,7 +111,7 @@ def entity_ids(value: Union[str, Sequence]) -> Sequence[str]:
     if value is None:
         raise vol.Invalid('Entity IDs can not be None')
     if isinstance(value, str):
-        value = [ent_id.strip() for ent_id in value.split(',')]
+        value = [ent_id.strip() for ent_id in value.split(',') if ent_id.strip()]
 
     return [entity_id(ent_id) for ent_id in value]
 

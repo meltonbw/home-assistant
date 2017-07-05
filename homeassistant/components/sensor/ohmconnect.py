@@ -7,6 +7,7 @@ https://home-assistant.io/components/sensor.ohmconnect/
 import logging
 from datetime import timedelta
 import xml.etree.ElementTree as ET
+import time
 
 import requests
 import voluptuous as vol
@@ -71,14 +72,23 @@ class OhmconnectSensor(Entity):
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     def update(self):
         """Get the latest data from OhmConnect."""
-        try:
-            url = ("https://login.ohmconnect.com"
-                   "/verify-ohm-hour/{}").format(self._ohmid)
-            response = requests.get(url, timeout=10)
-            root = ET.fromstring(response.text)
+        for attempt in range(3):
+            try:
+                url = ("https://login.ohmconnect.com"
+                       "/verify-ohm-hour/{}").format(self._ohmid)
+                response = requests.get(url, timeout=10)
+                root = ET.fromstring(response.text)
 
-            for child in root:
-                self._data[child.tag] = child.text
-        except requests.exceptions.ConnectionError:
-            _LOGGER.error("No route to host/endpoint: %s", url)
-            self.data = {}
+                for child in root:
+                    self._data[child.tag] = child.text
+            except requests.exceptions.ConnectionError:
+                err_msg = "No route to host/endpoint: " + str(url)
+                self.data = {}
+            except ET.ParseError as parse_err:
+                err_msg = "XML parse error: " + str(parse_err)
+                self.data = {}
+            else:
+                break
+            time.sleep(1)
+        else:
+            _LOGGER.error("Failure, exceeded number of update attempts...\n%s", err_msg)

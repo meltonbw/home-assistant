@@ -10,8 +10,9 @@ import logging
 import voluptuous as vol
 
 from homeassistant.components.climate import (
-    STATE_AUTO, STATE_COOL, STATE_HEAT, STATE_IDLE, STATE_OFF,
+    STATE_AUTO, STATE_COOL, STATE_HEAT, STATE_IDLE, STATE_OFF, STATE_ON,
     ClimateDevice, PLATFORM_SCHEMA)
+from homeassistant.components.climate import PRECISION_HALVES
 from homeassistant.const import CONF_HOST, TEMP_FAHRENHEIT, ATTR_TEMPERATURE
 import homeassistant.helpers.config_validation as cv
 
@@ -83,6 +84,7 @@ class RadioThermostat(ClimateDevice):
         self._current_operation = STATE_IDLE
         self._name = None
         self._fmode = None
+        self._fan_list = [STATE_ON, STATE_AUTO]
         self._tmode = None
         self._hold_temp = hold_temp
         self._away = False
@@ -95,6 +97,11 @@ class RadioThermostat(ClimateDevice):
     def name(self):
         """Return the name of the Radio Thermostat."""
         return self._name
+
+    @property
+    def precision(self):
+        """Return the precision of the system."""
+        return PRECISION_HALVES
 
     @property
     def temperature_unit(self):
@@ -115,6 +122,11 @@ class RadioThermostat(ClimateDevice):
         return self._current_temperature
 
     @property
+    def current_fan_mode(self):
+        """Return whether the fan is on."""
+        return self._fmode
+
+    @property
     def current_operation(self):
         """Return the current operation. head, cool idle."""
         return self._current_operation
@@ -123,6 +135,11 @@ class RadioThermostat(ClimateDevice):
     def operation_list(self):
         """Return the operation modes list."""
         return self._operation_list
+
+    @property
+    def fan_list(self):
+        """List of available fan modes."""
+        return self._fan_list
 
     @property
     def target_temperature(self):
@@ -136,17 +153,22 @@ class RadioThermostat(ClimateDevice):
 
     def update(self):
         """Update the data from the thermostat."""
-        self._current_temperature = self.device.temp['raw']
+        temp = self.device.temp['raw']
+        if temp >= 0:
+            self._current_temperature = temp
         self._name = self.device.name['raw']
-        self._fmode = self.device.fmode['human']
-        self._tmode = self.device.tmode['human']
+        self._fmode = self.device.fmode['human'].lower()
+        self._tmode = self.device.tmode['human'].lower()
 
-        if self._tmode == 'Cool':
+        if self._tmode == STATE_COOL:
             self._target_temperature = self.device.t_cool['raw']
             self._current_operation = STATE_COOL
-        elif self._tmode == 'Heat':
+        elif self._tmode == STATE_HEAT:
             self._target_temperature = self.device.t_heat['raw']
             self._current_operation = STATE_HEAT
+        elif self._tmode == STATE_OFF:
+            self._target_temperature = None
+            self._current_operation = STATE_OFF
         else:
             self._current_operation = STATE_IDLE
 
@@ -156,13 +178,20 @@ class RadioThermostat(ClimateDevice):
         if temperature is None:
             return
         if self._current_operation == STATE_COOL:
-            self.device.t_cool = round(temperature * 2.0) / 2.0
+            self.device.it_cool = round(temperature * 2.0) / 2.0
         elif self._current_operation == STATE_HEAT:
-            self.device.t_heat = round(temperature * 2.0) / 2.0
+            self.device.it_heat = round(temperature * 2.0) / 2.0
         if self._hold_temp or self._away:
             self.device.hold = 1
         else:
             self.device.hold = 0
+
+    def set_fan_mode(self, fan):
+        """Set new target fan mode."""
+        if fan == STATE_AUTO:
+            self.device.fmode = 0
+        elif fan == STATE_ON:
+            self.device.fmode = 2
 
     def set_time(self):
         """Set device time."""
@@ -180,9 +209,9 @@ class RadioThermostat(ClimateDevice):
         elif operation_mode == STATE_AUTO:
             self.device.tmode = 3
         elif operation_mode == STATE_COOL:
-            self.device.t_cool = round(self._target_temperature * 2.0) / 2.0
+            self.device.tmode = 2
         elif operation_mode == STATE_HEAT:
-            self.device.t_heat = round(self._target_temperature * 2.0) / 2.0
+            self.device.tmode = 1
 
     def turn_away_mode_on(self):
         """Turn away on.
