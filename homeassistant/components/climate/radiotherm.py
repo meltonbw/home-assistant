@@ -152,23 +152,54 @@ class RadioThermostat(ClimateDevice):
         return self._away
 
     def update(self):
-        """Update the data from the thermostat."""
-        temp = self.device.temp['raw']
-        if temp >= 0:
-            self._current_temperature = temp
+        """Update and validate the data from the thermostat."""
+        current_temp = self.device.temp['raw']
+        if current_temp == -1:
+            _LOGGER.error("Couldn't get valid temperature reading")
+            return
+        self._current_temperature = current_temp
         self._name = self.device.name['raw']
-        self._fmode = self.device.fmode['human'].lower()
-        self._tmode = self.device.tmode['human'].lower()
+        try:
+            self._fmode = self.device.fmode['human']
+        except AttributeError:
+            _LOGGER.error("Couldn't get valid fan mode reading")
+        try:
+            self._tmode = self.device.tmode['human']
+        except AttributeError:
+            _LOGGER.error("Couldn't get valid thermostat mode reading")
+        try:
+            self._tstate = self.device.tstate['human']
+        except AttributeError:
+            _LOGGER.error("Couldn't get valid thermostat state reading")
 
-        if self._tmode == STATE_COOL:
-            self._target_temperature = self.device.t_cool['raw']
+        if self._tmode == 'Cool':
+            target_temp = self.device.t_cool['raw']
+            if target_temp == -1:
+                _LOGGER.error("Couldn't get target reading")
+                return
+            self._target_temperature = target_temp
             self._current_operation = STATE_COOL
-        elif self._tmode == STATE_HEAT:
-            self._target_temperature = self.device.t_heat['raw']
+        elif self._tmode == 'Heat':
+            target_temp = self.device.t_heat['raw']
+            if target_temp == -1:
+                _LOGGER.error("Couldn't get valid target reading")
+                return
+            self._target_temperature = target_temp
             self._current_operation = STATE_HEAT
-        elif self._tmode == STATE_OFF:
-            self._target_temperature = None
-            self._current_operation = STATE_OFF
+        elif self._tmode == 'Auto':
+            if self._tstate == 'Cool':
+                target_temp = self.device.t_cool['raw']
+                if target_temp == -1:
+                    _LOGGER.error("Couldn't get valid target reading")
+                    return
+                self._target_temperature = target_temp
+            elif self._tstate == 'Heat':
+                target_temp = self.device.t_heat['raw']
+                if target_temp == -1:
+                    _LOGGER.error("Couldn't get valid target reading")
+                    return
+                self._target_temperature = target_temp
+            self._current_operation = STATE_AUTO
         else:
             self._current_operation = STATE_IDLE
 
