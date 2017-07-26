@@ -201,7 +201,7 @@ class RadioThermostat(ClimateDevice):
                 self._target_temperature = target_temp
             self._current_operation = STATE_AUTO
         else:
-            self._current_operation = STATE_IDLE
+            self._current_operation = STATE_OFF
 
     def set_temperature(self, **kwargs):
         """Set new target temperature."""
