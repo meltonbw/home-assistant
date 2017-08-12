@@ -38,7 +38,7 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
     name = config.get(CONF_NAME)
     ohmid = config.get(CONF_ID)
 
-    add_devices([OhmconnectSensor(name, ohmid)])
+    add_devices([OhmconnectSensor(name, ohmid)], True)
 
 
 class OhmconnectSensor(Entity):
@@ -49,7 +49,6 @@ class OhmconnectSensor(Entity):
         self._name = name
         self._ohmid = ohmid
         self._data = {}
-        self.update()
 
     @property
     def name(self):
