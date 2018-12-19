@@ -46,6 +46,7 @@ TEST_REQUIREMENTS = (
     'coinmarketcap',
     'defusedxml',
     'dsmr_parser',
+    'enturclient',
     'ephem',
     'evohomeclient',
     'feedparser',
@@ -63,6 +64,7 @@ TEST_REQUIREMENTS = (
     'home-assistant-frontend',
     'homematicip',
     'influxdb',
+    'jsonpath',
     'libpurecoollink',
     'libsoundtouch',
     'luftdaten',
@@ -91,6 +93,7 @@ TEST_REQUIREMENTS = (
     'pyspcwebgw',
     'python-forecastio',
     'python-nest',
+    'python_awair',
     'pytradfri\\[async\\]',
     'pyunifi',
     'pyupnp-async',
@@ -108,6 +111,7 @@ TEST_REQUIREMENTS = (
     'srpenergy',
     'statsd',
     'uvcclient',
+    'vsure',
     'warrant',
     'pythonwhois',
     'wakeonlan',
@@ -205,7 +209,7 @@ def gather_modules():
         for req in module.REQUIREMENTS:
             if req in IGNORE_REQ:
                 continue
-            if '://' in req:
+            if '://' in req and 'pyharmony' not in req:
                 errors.append(
                     "{}[Only pypi dependencies are allowed: {}]".format(
                         package, req))
