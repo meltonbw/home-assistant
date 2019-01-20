@@ -6,7 +6,6 @@ https://home-assistant.io/components/sensor.ohmconnect/
 """
 import logging
 from datetime import timedelta
-import xml.etree.ElementTree as ET
 import time
 
 import requests
@@ -17,6 +16,8 @@ from homeassistant.const import CONF_NAME
 import homeassistant.helpers.config_validation as cv
 from homeassistant.util import Throttle
 from homeassistant.helpers.entity import Entity
+
+REQUIREMENTS = ['defusedxml==0.5.0']
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -69,6 +70,7 @@ class OhmconnectSensor(Entity):
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     def update(self):
         """Get the latest data from OhmConnect."""
+        import defusedxml.ElementTree as ET
         for attempt in range(3):
             try:
                 url = ("https://login.ohmconnect.com"
