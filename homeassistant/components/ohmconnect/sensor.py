@@ -1,7 +1,7 @@
 """Support for OhmConnect."""
 from datetime import timedelta
-import time
 import logging
+import time
 
 import defusedxml.ElementTree as ET
 import requests
@@ -68,7 +68,7 @@ class OhmconnectSensor(Entity):
         """Get the latest data from OhmConnect."""
         for attempt in range(3):
             try:
-                url = ("https://login.ohmconnect.com" "/verify-ohm-hour/{}").format(
+                url = "https://login.ohmconnect.com/verify-ohm-hour/{}".format(
                     self._ohmid
                 )
                 response = requests.get(url, timeout=10)
