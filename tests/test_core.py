@@ -1393,3 +1393,77 @@ async def test_start_events(hass):
         EVENT_HOMEASSISTANT_STARTED,
     ]
     assert core_states == [ha.CoreState.starting, ha.CoreState.running]
+
+
+async def test_log_blocking_events(hass, caplog):
+    """Ensure we log which task is blocking startup when debug logging is on."""
+    caplog.set_level(logging.DEBUG)
+
+    async def _wait_a_bit_1():
+        await asyncio.sleep(0.1)
+
+    async def _wait_a_bit_2():
+        await asyncio.sleep(0.1)
+
+    hass.async_create_task(_wait_a_bit_1())
+    await hass.async_block_till_done()
+
+    with patch.object(ha, "BLOCK_LOG_TIMEOUT", 0.0001):
+        hass.async_create_task(_wait_a_bit_2())
+        await hass.async_block_till_done()
+
+    assert "_wait_a_bit_2" in caplog.text
+    assert "_wait_a_bit_1" not in caplog.text
+
+
+async def test_chained_logging_hits_log_timeout(hass, caplog):
+    """Ensure we log which task is blocking startup when there is a task chain and debug logging is on."""
+    caplog.set_level(logging.DEBUG)
+
+    created = 0
+
+    async def _task_chain_1():
+        nonlocal created
+        created += 1
+        if created > 10:
+            return
+        hass.async_create_task(_task_chain_2())
+
+    async def _task_chain_2():
+        nonlocal created
+        created += 1
+        if created > 10:
+            return
+        hass.async_create_task(_task_chain_1())
+
+    with patch.object(ha, "BLOCK_LOG_TIMEOUT", 0.0001):
+        hass.async_create_task(_task_chain_1())
+        await hass.async_block_till_done()
+
+    assert "_task_chain_" in caplog.text
+
+
+async def test_chained_logging_misses_log_timeout(hass, caplog):
+    """Ensure we do not log which task is blocking startup if we do not hit the timeout."""
+    caplog.set_level(logging.DEBUG)
+
+    created = 0
+
+    async def _task_chain_1():
+        nonlocal created
+        created += 1
+        if created > 10:
+            return
+        hass.async_create_task(_task_chain_2())
+
+    async def _task_chain_2():
+        nonlocal created
+        created += 1
+        if created > 10:
+            return
+        hass.async_create_task(_task_chain_1())
+
+    hass.async_create_task(_task_chain_1())
+    await hass.async_block_till_done()
+
+    assert "_task_chain_" not in caplog.text
